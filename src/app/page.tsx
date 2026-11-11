@@ -97,6 +97,10 @@ export default function Home() {
       if (!response.ok) throw new Error(data.error);
       const next = data.game as Game;
       setGame(next);
+      if (name === "rematch") {
+        localStorage.setItem("puppet-house-game", next.id);
+        setAutoPlay(true);
+      }
       if (name === "whisper") void publishWhisper(String(payload.text || "")).catch(() => undefined);
     } catch (error) {
       console.error(error);
@@ -117,6 +121,16 @@ export default function Home() {
       if (!response.ok) return;
       const data = await response.json();
       const latest = gameRef.current;
+      if (data.game.nextGameId && data.game.nextGameId !== current.id) {
+        const nextResponse = await fetch(`/api/game?id=${encodeURIComponent(data.game.nextGameId)}&producerId=${encodeURIComponent(producerId)}`, { cache: "no-store" });
+        if (nextResponse.ok) {
+          const nextData = await nextResponse.json();
+          localStorage.setItem("puppet-house-game", nextData.game.id);
+          setAutoPlay(true);
+          setGame(nextData.game);
+          return;
+        }
+      }
       if (latest && data.game.updatedAt > latest.updatedAt && !busyRef.current) setGame(data.game);
     } catch { /* polling retries automatically */ }
   }, [producerId]);
@@ -139,8 +153,8 @@ export default function Home() {
   }, [game, nexconn, authorFor]);
 
   useEffect(() => {
-    if (screen !== "game" || !game || !producerId || game.phase === "results") return;
-    const timer = window.setInterval(() => { void syncGame(); }, nexconn ? 5000 : 1500);
+    if (screen !== "game" || !game || !producerId) return;
+    const timer = window.setInterval(() => { void syncGame(); }, game.phase === "results" ? 2000 : nexconn ? 5000 : 1500);
     return () => window.clearInterval(timer);
   }, [screen, game, producerId, syncGame, nexconn]);
 
@@ -168,6 +182,6 @@ export default function Home() {
   if (screen === "join") return <JoinParty onBack={() => setScreen("landing")} onContinue={(code) => { setPartyCode(code); setFlow("joinParty"); setScreen("casting"); }} />;
   if (screen === "casting" || !game) return <Casting flow={flow} onBack={() => setScreen("landing")} onStart={startSeason} busy={starting} />;
   if (game.phase === "lobby") return <PartyLobby game={game} busy={busy} onStart={() => action("startParty")} onNewSeason={newSeason} />;
-  if (game.phase === "results") return <Results game={game} onRestart={newSeason} />;
+  if (game.phase === "results") return <Results game={game} busy={busy} onRestart={newSeason} onRematch={() => action("rematch")} />;
   return <GameRoom game={game} busy={busy} autoPlay={autoPlay} nexconn={nexconn} onAutoPlay={setAutoPlay} onAction={action} onNewSeason={newSeason} />;
 }

@@ -68,6 +68,8 @@ export interface Spectator {
   name: string;
   joinedAt: number;
   lastTwistRound?: number;
+  predictions: Record<string, string>;
+  fanPoints: number;
 }
 
 export interface Producer {
@@ -107,6 +109,10 @@ export interface Game {
   viewers: number;
   spectators: Record<string, Spectator>;
   spectatorCount: number;
+  predictionTally: Record<string, number>;
+  predictionTotal: number;
+  nextGameId?: string;
+  nextRoomCode?: string;
   createdAt: number;
   updatedAt: number;
   aiMode: "live" | "director";

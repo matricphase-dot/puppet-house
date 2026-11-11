@@ -2,7 +2,7 @@
 
 import { FormEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Eye, Heart, Radio, RotateCcw, Send, Shield, Sparkles, UsersRound, Video, Zap } from "lucide-react";
+import { Activity, Eye, Heart, Radio, RotateCcw, Send, Shield, Sparkles, Trophy, UsersRound, Video, Zap } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { FeedMessage } from "@/components/GameRoom";
 import { Logo } from "@/components/Logo";
@@ -65,10 +65,11 @@ function SpectatorRoom() {
   useEffect(() => {
     if (!spectator) return;
     const timer = window.setInterval(async () => {
-      const response = await fetch(`/api/game?code=${encodeURIComponent(code)}&spectator=1`, { cache: "no-store" });
+      const response = await fetch(`/api/game?code=${encodeURIComponent(code)}&spectator=1&spectatorId=${encodeURIComponent(spectator.id)}`, { cache: "no-store" });
       if (response.ok) {
         const data = await response.json();
         setGame(data.game);
+        if (data.spectator) setSpectator(data.spectator);
       }
     }, 1400);
     return () => window.clearInterval(timer);
@@ -76,7 +77,7 @@ function SpectatorRoom() {
 
   useEffect(() => { feedEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [game?.messages.length, channel]);
 
-  const action = async (actionName: "spectatorTwist" | "spectatorChat", payload: Record<string, unknown> = {}) => {
+  const action = async (actionName: "spectatorTwist" | "spectatorChat" | "spectatorPredict", payload: Record<string, unknown> = {}) => {
     if (!spectator || busy) return;
     setBusy(true);
     try {
@@ -112,7 +113,12 @@ function SpectatorRoom() {
     const Icon = twistIcons[twist.id];
     const used = game.twistsUsed.includes(twist.id);
     return <button key={twist.id} disabled={used || votedThisRound || busy || game.phase === "results"} className={used ? "used" : ""} onClick={() => action("spectatorTwist", { twist: twist.id as TwistId })}><Icon size={19} /><span><strong>{twist.name}</strong><small>{used ? "Already unleashed" : twist.description}</small></span></button>;
-  })}</div>{game.phase === "vote" && <div className="spectator-vote-notice"><Radio size={15} />The producer is voting. A revote clears their ballot.</div>}{game.phase === "results" && <div className="spectator-winner"><span>WINNER</span><strong>{game.contestants.find((person) => person.id === game.winnerId)?.name}</strong></div>}<div className="audience-rules"><span>AUDIENCE RULES</span><p>Be chaotic, not cruel. No hate speech, personal information, or spoilers from the producer.</p></div></aside></div></main>;
+  })}</div>{game.phase === "vote" && <div className="house-pulse"><div className="pulse-heading"><span><Activity size={15} /> HOUSE PULSE</span><strong><Trophy size={12} /> {spectator.fanPoints} PTS</strong></div><h3>{game.round === 3 ? "Predict the winner" : "Predict who leaves"}</h3><p>One call per round. 100 points if you are right, 25 for playing.</p><div className="pulse-options">{game.contestants.filter((person) => !person.eliminated).map((person) => {
+  const count = game.predictionTally[person.id] || 0;
+  const percentage = game.predictionTotal ? Math.round(count / game.predictionTotal * 100) : 0;
+  const selected = spectator.predictions?.[String(game.round)] === person.id;
+  return <button key={person.id} disabled={Boolean(spectator.predictions?.[String(game.round)]) || busy} className={selected ? "selected" : ""} onClick={() => action("spectatorPredict", { targetId: person.id })}><Avatar name={person.name} color={person.color} avatar={person.avatar} size={28} /><span><strong>{person.name}</strong><i><b style={{ width: `${percentage}%`, background: person.color }} /></i></span><em>{selected ? "YOUR CALL" : game.predictionTotal ? `${percentage}%` : "—"}</em></button>;
+})}</div><small>{game.predictionTotal ? `${game.predictionTotal} prediction${game.predictionTotal === 1 ? "" : "s"} locked` : "Be the first oracle. Your choice stays anonymous."}</small></div>}{game.phase === "vote" && <div className="spectator-vote-notice"><Radio size={15} />Producers are voting. A revote can clear the ballots.</div>}{game.phase === "results" && <><div className="spectator-winner"><span>WINNER</span><strong>{game.contestants.find((person) => person.id === game.winnerId)?.name}</strong></div><div className="oracle-result"><Trophy size={16} /><span><strong>{spectator.fanPoints} Oracle points</strong><small>Your audience prediction score</small></span></div>{game.nextRoomCode && <a className="button button-primary next-season-link" href={`/spectate/${game.nextRoomCode}`}>Join the rematch <RotateCcw size={15} /></a>}</>}<div className="audience-rules"><span>AUDIENCE RULES</span><p>Be chaotic, not cruel. No hate speech, personal information, or spoilers from the producer.</p></div></aside></div></main>;
 }
 
 export default function SpectatePage() {

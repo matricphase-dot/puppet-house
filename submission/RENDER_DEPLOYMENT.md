@@ -34,6 +34,7 @@ APP_URL=https://YOUR_APP.onrender.com npm run test:game
 APP_URL=https://YOUR_APP.onrender.com npm run test:party
 GAME_URL=https://YOUR_APP.onrender.com npm run test:browser
 APP_URL=https://YOUR_APP.onrender.com npm run test:party-browser
+APP_URL=https://YOUR_APP.onrender.com npm run test:enhancements
 APP_URL=https://YOUR_APP.onrender.com npm run test:nexconn
 ```
 

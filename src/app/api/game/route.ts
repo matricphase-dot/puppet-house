@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateLine } from "@/game/ai";
 import {
-  aliveContestants, castVote, createGame, createParty, joinParty, publicGame,
-  revealVotes, joinSpectator, spectatorChat, startParty, tick, triggerTwist, whisper,
+  aliveContestants, castVote, createGame, createParty, createRematch, joinParty, publicGame,
+  revealVotes, joinSpectator, spectatorChat, spectatorPredict, startParty, tick, triggerTwist, whisper,
 } from "@/game/engine";
 import { getGame, getGameByCode, saveGame, updateGame } from "@/game/store";
 import { cleanText, moderationError, rateLimit, securityHeaders } from "@/game/security";
@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
   const game = code ? await getGameByCode(code) : await getGame(id);
   if (!game) return respond({ error: "Game not found" }, 404);
   if (!spectatorView && !game.producers[producerId || ""]) return respond({ error: "A valid producer identity is required." }, 403);
-  return respond({ game: publicGame(game, spectatorView, producerId) });
+  const spectatorId = request.nextUrl.searchParams.get("spectatorId") || "";
+  return respond({ game: publicGame(game, spectatorView, producerId), spectator: spectatorView ? game.spectators[spectatorId] : undefined });
 }
 
 export async function POST(request: NextRequest) {
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
       return respond({ game: publicGame(updated.game, true), spectator: updated.result });
     }
 
-    if (["spectatorTwist", "spectatorChat"].includes(body.action)) {
+    if (["spectatorTwist", "spectatorChat", "spectatorPredict"].includes(body.action)) {
       if (body.action === "spectatorChat") {
         const chatLimit = await rateLimit(request, "audience-chat", 20);
         if (chatLimit) return chatLimit;
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest) {
           if (moderated) throw new ActionError(moderated);
           if (text) spectatorChat(game, spectatorId, text);
         }
+        if (body.action === "spectatorPredict") spectatorPredict(game, spectatorId, cleanText(body.targetId, 100));
         if (body.action === "spectatorTwist" && spectator.lastTwistRound !== game.round) {
           const before = game.twistsUsed.length;
           triggerTwist(game, body.twist as TwistId);
@@ -107,6 +109,23 @@ export async function POST(request: NextRequest) {
       });
       if (!updated) throw new ActionError("That room no longer exists.", 404);
       return respond({ game: publicGame(updated.game, true), spectator: updated.game.spectators[updated.result.id] });
+    }
+
+    if (body.action === "rematch") {
+      const rematched = await updateGame({ id: cleanText(body.gameId, 80) }, async (oldGame) => {
+        const producerId = cleanText(body.producerId, 100);
+        if (!oldGame.producers[producerId] || oldGame.hostId !== producerId) throw new ActionError("Only the host can start a rematch.", 403);
+        if (oldGame.mode !== "party" || oldGame.phase !== "results") throw new ActionError("Rematches are available after a party season.", 409);
+        if (oldGame.nextGameId) {
+          const existing = await getGame(oldGame.nextGameId);
+          if (existing) return { game: existing, producerId };
+        }
+        const nextGame = createRematch(oldGame);
+        await saveGame(nextGame);
+        return { game: nextGame, producerId };
+      });
+      if (!rematched) throw new ActionError("Game not found. Start a new season.", 404);
+      return respond({ game: publicGame(rematched.result.game, false, rematched.result.producerId), producerId: rematched.result.producerId });
     }
 
     const updated = await updateGame({ id: cleanText(body.gameId, 80) }, async (game) => {

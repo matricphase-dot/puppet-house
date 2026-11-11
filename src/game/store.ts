@@ -19,16 +19,23 @@ function ensureDirectory() { fs.mkdirSync(dataDirectory, { recursive: true }); }
 function gamePath(id: string) { return path.join(dataDirectory, `${id.replace(/[^a-zA-Z0-9_-]/g, "")}.json`); }
 
 function normalize(game: Game): Game {
-  if (game.mode && game.producers && game.whisperCounts && game.ballots) return game;
   const player = game.contestants.find((person) => person.isPlayer) || game.contestants[0];
   const legacy = game as Game & { whispersLeft?: number; playerVote?: string };
-  game.mode = game.mode || "solo";
-  game.hostId = game.hostId || `producer-${game.id}`;
-  game.producers = game.producers || { [game.hostId]: { id: game.hostId, contestantId: player.id, joinedAt: game.createdAt } };
-  player.producerId = game.hostId;
-  game.whisperCounts = game.whisperCounts || { [game.hostId]: legacy.whispersLeft ?? 3 };
-  game.ballots = game.ballots || (legacy.playerVote ? { [player.id]: legacy.playerVote } : {});
+  if (!game.mode || !game.producers || !game.whisperCounts || !game.ballots) {
+    game.mode = game.mode || "solo";
+    game.hostId = game.hostId || `producer-${game.id}`;
+    game.producers = game.producers || { [game.hostId]: { id: game.hostId, name: player.name, contestantId: player.id, isHost: true, joinedAt: game.createdAt } };
+    player.producerId = game.hostId;
+    game.whisperCounts = game.whisperCounts || { [game.hostId]: legacy.whispersLeft ?? 3 };
+    game.ballots = game.ballots || (legacy.playerVote ? { [player.id]: legacy.playerVote } : {});
+  }
   game.spectators = game.spectators || {};
+  Object.values(game.spectators).forEach((spectator) => {
+    spectator.predictions = spectator.predictions || {};
+    spectator.fanPoints = spectator.fanPoints || 0;
+  });
+  game.predictionTally = game.predictionTally || {};
+  game.predictionTotal = game.predictionTotal || 0;
   game.votes = game.votes || {};
   game.scores = game.scores || [];
   game.twistsUsed = game.twistsUsed || [];

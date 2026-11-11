@@ -108,6 +108,8 @@ function createProducerGame(input: CastingInput, mode: GameMode): { game: Game; 
     viewers: 1247,
     spectators: {},
     spectatorCount: 0,
+    predictionTally: {},
+    predictionTotal: 0,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     aiMode: process.env.AI_API_KEY ? "live" : "director",
@@ -176,6 +178,43 @@ export function createGame(input: CastingInput): Game {
 
 export function createParty(input: CastingInput): { game: Game; producer: Producer } {
   return createProducerGame(input, "party");
+}
+
+function castingFrom(person: Contestant): CastingInput {
+  return { name: person.name, archetype: person.archetype, tagline: person.tagline, secret: person.secret, objectiveId: person.objectiveId as ObjectiveId };
+}
+
+export function createRematch(previous: Game): Game {
+  const humans = previous.contestants.filter((person) => person.producerId);
+  if (!humans.length || previous.mode !== "party") throw new Error("Only party seasons can be rematched.");
+  const first = humans[0];
+  const { game, producer } = createProducerGame(castingFrom(first), "party");
+  const oldGeneratedId = producer.id;
+  producer.id = first.producerId!;
+  producer.isHost = producer.id === previous.hostId;
+  game.contestants[0].producerId = producer.id;
+  game.hostId = previous.hostId;
+  game.producers = { [producer.id]: producer };
+  game.whisperCounts = { [producer.id]: 3 };
+  delete game.whisperCounts[oldGeneratedId];
+
+  humans.slice(1).forEach((person) => {
+    const oldId = person.producerId!;
+    const joined = joinParty(game, castingFrom(person));
+    if (!joined) return;
+    const generatedId = joined.id;
+    joined.id = oldId;
+    joined.isHost = oldId === previous.hostId;
+    const contestant = game.contestants.find((item) => item.id === joined.contestantId)!;
+    contestant.producerId = oldId;
+    delete game.producers[generatedId];
+    delete game.whisperCounts[generatedId];
+    game.producers[oldId] = joined;
+    game.whisperCounts[oldId] = 3;
+  });
+  previous.nextGameId = game.id;
+  previous.nextRoomCode = game.roomCode;
+  return game;
 }
 
 export function joinParty(game: Game, input: CastingInput): Producer | undefined {
@@ -410,6 +449,7 @@ export function revealVotes(game: Game): Game {
     });
     game.scores.sort((a, b) => b.total - a.total);
     game.winnerId = game.scores[0].contestantId;
+    settlePredictions(game, game.winnerId);
     const winner = game.contestants.find((person) => person.id === game.winnerId)!;
     addMessage(game, { senderId: "host", channel: "house", kind: "vote", text: `${winner.name.toUpperCase()} WINS PUPPET HOUSE. The strings are cut. The crown is real.` });
     game.phase = "results";
@@ -446,6 +486,7 @@ export function revealVotes(game: Game): Game {
     }
   });
   eliminated.eliminated = true;
+  settlePredictions(game, eliminated.id);
   game.contestants.forEach((person) => { person.immunity = false; });
   game.votes = votes;
   addMessage(game, {
@@ -478,12 +519,34 @@ export function revealVotes(game: Game): Game {
 }
 
 export function joinSpectator(game: Game, name: string, spectatorId?: string): Spectator {
-  const spectator: Spectator = { id: spectatorId || `viewer-${id()}`, name: name.trim().slice(0, 18) || "Anonymous", joinedAt: Date.now() };
+  const spectator: Spectator = { id: spectatorId || `viewer-${id()}`, name: name.trim().slice(0, 18) || "Anonymous", joinedAt: Date.now(), predictions: {}, fanPoints: 0 };
   const previous = spectatorId ? game.spectators[spectatorId] : undefined;
   game.spectators[spectator.id] = { ...previous, ...spectator };
   game.spectatorCount = Object.keys(game.spectators).length;
   game.updatedAt = Date.now();
   return game.spectators[spectator.id];
+}
+
+export function spectatorPredict(game: Game, spectatorId: string, targetId: string): Game {
+  const spectator = game.spectators[spectatorId];
+  const target = game.contestants.find((person) => person.id === targetId && !person.eliminated);
+  if (!spectator || !target || game.phase !== "vote" || spectator.predictions[String(game.round)]) return game;
+  spectator.predictions[String(game.round)] = target.id;
+  addMessage(game, { senderId: "audience", channel: "audience", kind: "audience", text: `🔮 ${spectator.name} locked a House Pulse prediction for round ${game.round}.` });
+  return game;
+}
+
+function settlePredictions(game: Game, correctId: string) {
+  const predictions = Object.values(game.spectators).filter((spectator) => spectator.predictions[String(game.round)]);
+  if (!predictions.length) return;
+  let correct = 0;
+  predictions.forEach((spectator) => {
+    const hit = spectator.predictions[String(game.round)] === correctId;
+    spectator.fanPoints += hit ? 100 : 25;
+    if (hit) correct += 1;
+  });
+  const correctName = game.contestants.find((person) => person.id === correctId)?.name || "the result";
+  addMessage(game, { senderId: "host", channel: "house", kind: "system", text: `HOUSE PULSE → ${correct}/${predictions.length} audience oracles predicted ${correctName}. Correct calls earn 100 Oracle points; every prediction earns 25.` });
 }
 
 export function spectatorChat(game: Game, spectatorId: string, text: string): Game {
@@ -499,6 +562,13 @@ export function publicGame(game: Game, spectatorView = false, requestedProducerI
   const producerId = spectatorView ? undefined : requestedProducerId || copy.hostId;
   const own = producerId ? copy.contestants.find((person) => person.producerId === producerId) : undefined;
   copy.spectatorCount = Object.keys(copy.spectators || {}).length;
+  copy.predictionTally = {};
+  Object.values(copy.spectators || {}).forEach((spectator) => {
+    const target = spectator.predictions?.[String(copy.round)];
+    if (target && copy.phase === "vote") copy.predictionTally[target] = (copy.predictionTally[target] || 0) + 1;
+  });
+  copy.predictionTotal = Object.values(copy.predictionTally).reduce((sum, count) => sum + count, 0);
+  copy.spectators = {};
   copy.playerId = own?.id || "";
   copy.isHost = !spectatorView && producerId === copy.hostId;
   copy.contestants.forEach((person) => { person.isPlayer = person.id === own?.id; });

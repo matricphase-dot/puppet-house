@@ -11,8 +11,12 @@ A real-time, chat-driven reality-show strategy game for the **Nexconn Build Chal
 - **Three-round social strategy:** autonomous public chat, contestant-to-contestant private DMs, trust, popularity, alliances, conflict, ballots, eliminations and a final crown.
 - **Asymmetric information:** each contestant has a private secret and one of eight objectives; every producer gets exactly three private whispers.
 - **Audience participation:** shareable `/spectate/<ROOM-CODE>` rooms, display names, audience chat, and one bounded twist per spectator per round.
+- **House Pulse:** anonymous audience predictions, live consensus bars and season-long Oracle points for accurate calls.
 - **Five twists:** Memory Leak, Double Agent, Immunity, Confessional and Revote.
 - **Results and receipts:** objective progress, score breakdowns, winners and season replay.
+- **Season Storylines:** automatic closest-bond, betrayal, exposure, house-target and voting awards.
+- **Shareable finale cards:** branded 1200×630 PNG downloads generated from the actual results.
+- **One-click party rematches:** preserved producer identities and cast, fresh whisper budgets and a new audience room.
 - **Responsive UI:** desktop and mobile layouts, local reconnect/resume, and saved authoritative rooms.
 - **Director Mode:** deterministic, fully playable dialogue without AI or Nexconn credentials.
 
@@ -154,13 +158,14 @@ npx playwright install chromium
 npx playwright install-deps chromium
 npm run test:browser
 node scripts/party-browser-check.mjs
+npm run test:enhancements
 # With Nexconn credentials configured; otherwise this explicitly reports SKIP:
 npm run test:nexconn
 ```
 
 Scripts use `APP_URL` or `GAME_URL` when testing another address. Screenshots are written to `/home/user/qa-puppet-house` in the build workspace.
 
-The automated party test covers 55 actions, four independent producers, unauthorized access, host permissions, private whispers and DMs, ballot readiness, three rounds, finale scoring, reconnect reads and AI-filled seats. Browser tests cover two separate party sessions and solo/spectator desktop/mobile flows.
+The automated party test covers 58 actions, four independent producers, unauthorized access, host permissions, concurrent private whispers, private DMs, ballot readiness, three rounds, finale scoring, reconnect reads, AI-filled seats and identity-preserving rematches. Browser tests cover two separate party sessions, solo/spectator desktop/mobile flows, House Pulse predictions, Oracle settlement, finale storylines, real PNG downloads, mobile results and automatic guest rematch migration.
 
 ## Deployment and submission boundary
 

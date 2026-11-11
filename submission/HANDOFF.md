@@ -6,7 +6,8 @@
 
 - Solo Director Mode and two-to-four-producer party rooms with AI-filled seats.
 - Server-authoritative private knowledge, three-whisper budgets, pacing, twists, ballots, elimination and scoring.
-- Privacy-safe spectators, audience chat and bounded audience powers.
+- Privacy-safe spectators, audience chat, bounded audience powers, House Pulse predictions and Oracle points.
+- Automatic Season Storylines, downloadable finale PNG cards and identity-preserving party rematches.
 - Private contestant DMs with deliberate Double Agent exposure.
 - Local atomic persistence, optional PostgreSQL transactions, shared rate limits and cleanup.
 - Nexconn token issuance, group/direct transport, receive handlers and polling fallback.

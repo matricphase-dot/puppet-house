@@ -11,7 +11,8 @@
     "test:party": "node scripts/party-playthrough.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "test:party-browser": "node scripts/party-browser-check.mjs",
-    "test:nexconn": "node scripts/nexconn-smoke.mjs"
+    "test:nexconn": "node scripts/nexconn-smoke.mjs",
+    "test:enhancements": "node scripts/enhancements-browser-check.mjs"
   },
   "dependencies": {
     "@nexconn/chat": "^26.2.1",

@@ -80,11 +80,24 @@ assert(game.twistsUsed.length === 4, "live twists execute");
 
 let safety = 0;
 let revoteTested = false;
+let predictionTested = false;
 while (game.phase !== "results" && safety < 100) {
   safety += 1;
   if (game.phase === "live") {
     await call("tick");
     continue;
+  }
+  if (!predictionTested) {
+    const predictionTarget = game.contestants.find((person) => !person.eliminated);
+    await spectatorAction("spectatorPredict", { targetId: predictionTarget.id });
+    assert(game.predictionTotal === 1, "audience prediction enters House Pulse");
+    assert(Object.keys(game.spectators).length === 0, "spectator identity records are never public");
+    assert(spectator.predictions[String(game.round)] === predictionTarget.id, "own prediction is returned privately");
+    const otherTarget = game.contestants.find((person) => !person.eliminated && person.id !== predictionTarget.id);
+    await spectatorAction("spectatorPredict", { targetId: otherTarget.id });
+    assert(game.predictionTotal === 1 && spectator.predictions[String(game.round)] === predictionTarget.id, "one prediction per spectator per round");
+    predictionTested = true;
+    game = await (await fetch(`${base}/api/game?id=${game.id}&producerId=${producerId}`)).json().then((data) => data.game);
   }
   const player = game.contestants.find((person) => person.isPlayer);
   const target = game.contestants.find((person) => !person.isPlayer && !person.eliminated && !(game.round < 3 && person.immunity));
@@ -103,6 +116,9 @@ assert(game.phase === "results", `season reaches results in ${safety} actions`);
 assert(game.winnerId, "a winner is selected");
 assert(game.scores.length === 4, "all contestants receive scores");
 assert(game.contestants.every((person) => person.objectiveId !== "hidden"), "objectives are revealed at results");
+const settledAudience = await (await fetch(`${base}/api/game?code=${game.roomCode}&spectator=1&spectatorId=${spectator.id}`)).json();
+assert(settledAudience.spectator.fanPoints >= 25, "Oracle points settle after the vote");
+assert(Object.keys(settledAudience.game.spectators).length === 0, "spectator map remains redacted after settlement");
 console.log(JSON.stringify({
   result: "PASS",
   actions: safety,

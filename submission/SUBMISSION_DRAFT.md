@@ -26,9 +26,10 @@ A season is easy to understand, watchable in public and different in private. Pr
 1. **Cast:** One to four producers each author a contestant with a personality, public persona, private secret and secret mission. Empty seats become autonomous contestants.
 2. **Coexist:** Four contestants converse autonomously, build or lose trust, send private DMs and gain or lose popularity over three rounds.
 3. **Coach:** Each producer has exactly three private whispers for the entire season. Advice influences the next public moment but does not directly dictate it.
-4. **Interfere:** Named spectators chat and trigger one bounded twist per round: Memory Leak, Double Agent, Immunity, Confessional or Revote.
+4. **Interfere:** Named spectators chat and trigger one bounded twist per round: Memory Leak, Double Agent, Immunity, Confessional or Revote. During ballots, House Pulse lets each spectator make one anonymous elimination or winner prediction per round, with live consensus and Oracle points for accurate calls.
 5. **Vote:** Eligible producers submit independent private ballots. Only the host controls pacing and reveals votes after all required ballots arrive.
-6. **Win:** Eliminations lead to a final crown ballot. Scores combine popularity, secret objectives, survival, strategy and final votes. Results include readable season receipts.
+6. **Win:** Eliminations lead to a final crown ballot. Scores combine popularity, secret objectives, survival, strategy and final votes. Results include readable season receipts, automatic Season Storylines and a downloadable finale card.
+7. **Rematch:** The host can reopen the same party with preserved producer identities and cast, fresh whisper budgets and a new audience room. Guests migrate automatically; spectators receive a rematch link.
 
 ## Why Nexconn is structural
 
@@ -51,6 +52,8 @@ Puppet House is not presented as the first AI social simulator. Its differentiat
 - **Audience information control:** viewers can expose selected information and disrupt votes through bounded powers.
 - **Two-layer spectating:** the public feed is watchable while producer-only information remains meaningful.
 - **Short, replayable seasons:** casting, three rounds and receipts create a complete social story in minutes.
+- **Audience skill alongside chaos:** House Pulse rewards accurate social reads with Oracle points, giving spectators a persistent reason to follow the cast rather than only press twist buttons.
+- **Built-in sharing and retention:** finale cards turn results into social artifacts, Season Storylines create memorable characters, and same-party rematches eliminate re-invite friction.
 
 The same engine supports friend-group party games, campus events, creator-led tournaments and branded interactive reality formats.
 
@@ -91,9 +94,10 @@ A sensible first validation is a campus/club test measuring completed seasons, p
 
 - Production TypeScript build and ESLint.
 - Solo/spectator API season, twists, privacy and persistence.
-- 55-action four-producer test covering authorization, concurrent whispers, private DMs, ballots, three rounds, finale and AI-filled seats.
+- 58-action four-producer test covering authorization, concurrent whispers, private DMs, ballots, three rounds, finale, AI-filled seats and identity-preserving rematches.
 - Desktop/mobile producer and spectator browser QA.
 - Two-browser host/guest party QA, private DOM checks and reconnect.
+- Enhancement browser QA covering House Pulse, Oracle points, storylines, a real PNG download, mobile results and automatic guest rematch migration.
 
 Live Nexconn, managed PostgreSQL and optional model dialogue still require credential-based verification on the public deployment. Those checks are release gates, not assumed results.
 

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Check, Copy, Eye, Heart, LockKeyhole, MessageSquareText, Pause, Play, Radio, RotateCcw,
+  Check, CircleHelp, Copy, Eye, Heart, LockKeyhole, MessageSquareText, Pause, Play, Radio, RotateCcw,
   Send, Shield, Sparkles, UsersRound, Video, Vote, Zap,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -47,6 +47,7 @@ export function GameRoom({ game, busy, autoPlay, nexconn, onAutoPlay, onAction, 
   const [channel, setChannel] = useState<Channel>("house");
   const [whisperText, setWhisperText] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const feedEnd = useRef<HTMLDivElement>(null);
   const player = game.contestants.find((person) => person.isPlayer)!;
   const objective = OBJECTIVES.find((item) => item.id === player.objectiveId)!;
@@ -55,6 +56,8 @@ export function GameRoom({ game, busy, autoPlay, nexconn, onAutoPlay, onAction, 
   const messages = useMemo(() => game.messages.filter((message) => message.channel === channel), [game.messages, channel]);
   const closest = Object.entries(player.trust).sort((a, b) => b[1] - a[1])[0];
   const closestPerson = game.contestants.find((person) => person.id === closest?.[0]);
+  const predictionLeader = Object.entries(game.predictionTally).sort((a, b) => b[1] - a[1])[0];
+  const predictionPerson = game.contestants.find((person) => person.id === predictionLeader?.[0]);
 
   useEffect(() => { feedEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages.length, channel]);
 
@@ -79,7 +82,7 @@ export function GameRoom({ game, busy, autoPlay, nexconn, onAutoPlay, onAction, 
         <Logo compact />
         <div className="season-status"><span className="live-pill"><i /> LIVE</span><div><strong>{game.round === 3 ? "THE FINALE" : `ROUND ${game.round} OF 3`}</strong><small>{game.phase === "vote" ? "VOTING OPEN" : `${game.turn}/${game.turnsPerRound} MOMENTS`}</small></div></div>
         <button className="room-invite" onClick={copyInvite} title="Copy spectator invite">{copied ? <Check size={14} /> : <Copy size={14} />}<span>{copied ? "INVITE COPIED" : `ROOM ${game.roomCode}`}</span></button>
-        <div className="header-actions"><span className={`transport-status ${nexconn ? "connected" : ""}`} title={nexconn ? "Nexconn Chat connected" : "Local Director transport"}><i />{nexconn ? "NEXCONN LIVE" : "DIRECTOR MODE"}</span><span className="viewer-count" title={`${game.spectatorCount} joined spectators`}><Eye size={15} />{(game.viewers + game.spectatorCount).toLocaleString()}</span>{game.isHost && <button className="icon-button" onClick={() => onAutoPlay(!autoPlay)} title={autoPlay ? "Pause season" : "Resume season"}>{autoPlay ? <Pause size={18} /> : <Play size={18} />}</button>}</div>
+        <div className="header-actions"><span className={`transport-status ${nexconn ? "connected" : ""}`} title={nexconn ? "Nexconn Chat connected" : "Local Director transport"}><i />{nexconn ? "NEXCONN LIVE" : "DIRECTOR MODE"}</span><span className="viewer-count" title={`${game.spectatorCount} joined spectators`}><Eye size={15} />{(game.viewers + game.spectatorCount).toLocaleString()}</span><button className="icon-button" onClick={() => setShowGuide(true)} title="How to play"><CircleHelp size={18} /></button>{game.isHost && <button className="icon-button" onClick={() => onAutoPlay(!autoPlay)} title={autoPlay ? "Pause season" : "Resume season"}>{autoPlay ? <Pause size={18} /> : <Play size={18} />}</button>}</div>
       </header>
 
       <div className="round-progress" aria-label="Round progress">{Array.from({ length: game.turnsPerRound }).map((_, index) => <i key={index} className={index < game.turn ? "done" : index === game.turn && game.phase === "live" ? "current" : ""} />)}</div>
@@ -119,10 +122,11 @@ export function GameRoom({ game, busy, autoPlay, nexconn, onAutoPlay, onAction, 
         </aside>
       </div>
 
+      {showGuide && <div className="guide-overlay" role="dialog" aria-modal="true" aria-label="How to play"><section className="guide-card"><button className="guide-close" onClick={() => setShowGuide(false)} aria-label="Close guide">×</button><div className="eyebrow"><Sparkles size={14} /> YOUR 30-SECOND HOUSE BRIEFING</div><h2>Coach the chaos.<br /><em>Do not script it.</em></h2><div className="guide-steps"><article><span>01</span><div><strong>Watch your puppet think</strong><p>Contestants speak autonomously, build trust and send private DMs. Only their own producer sees those DMs.</p></div></article><article><span>02</span><div><strong>Spend three whispers wisely</strong><p>You get exactly three for the whole season. Your contestant interprets each instruction in its next public moment.</p></div></article><article><span>03</span><div><strong>Vote, survive, complete the mission</strong><p>Submit a private ballot each vote. Use audience twists, track your secret objective and reach the finale.</p></div></article></div><button className="button button-primary" onClick={() => setShowGuide(false)}>I know the risks <Play size={16} /></button></section></div>}
       {game.phase === "vote" && <div className="vote-overlay"><section className="vote-card"><div className="vote-intro"><span><Vote size={22} /></span><div><small>{game.round === 3 ? "THE FINAL BALLOT" : `ROUND ${game.round} · ELIMINATION`}</small><h2>{game.round === 3 ? "Who gets the crown?" : "Who does your puppet vote out?"}</h2><p>{game.round === 3 ? "Your choice adds 15 points. Popularity and secret missions decide the rest." : "Rival contestants have already made their choices. Yours closes the vote."}</p></div></div><div className="vote-options">{alive.filter((person) => person.id !== player.id).map((person) => {
         const protectedPerson = game.round < 3 && person.immunity;
         return <button key={person.id} disabled={protectedPerson || player.eliminated} className={game.playerVote === person.id ? "selected" : ""} onClick={() => onAction("vote", { targetId: person.id })}><Avatar name={person.name} color={person.color} avatar={person.avatar} size={66} /><strong>{person.name}</strong><span>{protectedPerson ? "IMMUNE" : `${person.popularity}% LOVED`}</span>{game.playerVote === person.id && <i>YOUR VOTE</i>}</button>;
-      })}</div><div className="ballot-status">{player.eliminated ? "Your puppet is out. You are watching this vote." : game.mode === "party" ? `${game.ballotsSubmitted}/${game.ballotsRequired} eligible producer ballots submitted` : "Your ballot is private until the reveal."}</div><div className="vote-actions">{game.playerVote && game.round < 3 && !game.twistsUsed.includes("revote") && <button className="text-button" onClick={() => onAction("twist", { twist: "revote" })}><RotateCcw size={15} /> Audience revote</button>}{game.isHost ? <button className="button button-primary" disabled={!game.ballotsReady || busy} onClick={() => onAction("reveal")}>{game.ballotsReady ? game.round === 3 ? "Crown the winner" : "Reveal the votes" : "Waiting for ballots"}<Vote size={17} /></button> : <span className="waiting-ballots">The host will reveal the votes.</span>}</div></section></div>}
+      })}</div><div className="ballot-status">{player.eliminated ? "Your puppet is out. You are watching this vote." : game.mode === "party" ? `${game.ballotsSubmitted}/${game.ballotsRequired} eligible producer ballots submitted` : "Your ballot is private until the reveal."}</div>{game.predictionTotal > 0 && predictionPerson && <div className="producer-pulse"><Eye size={13} /><span>HOUSE PULSE · {game.predictionTotal} audience prediction{game.predictionTotal === 1 ? "" : "s"} · {predictionPerson.name} leads with {Math.round((predictionLeader?.[1] || 0) / game.predictionTotal * 100)}%</span></div>}<div className="vote-actions">{game.playerVote && game.round < 3 && !game.twistsUsed.includes("revote") && <button className="text-button" onClick={() => onAction("twist", { twist: "revote" })}><RotateCcw size={15} /> Audience revote</button>}{game.isHost ? <button className="button button-primary" disabled={!game.ballotsReady || busy} onClick={() => onAction("reveal")}>{game.ballotsReady ? game.round === 3 ? "Crown the winner" : "Reveal the votes" : "Waiting for ballots"}<Vote size={17} /></button> : <span className="waiting-ballots">The host will reveal the votes.</span>}</div></section></div>}
     </main>
   );
 }

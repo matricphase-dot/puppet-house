@@ -36,7 +36,7 @@
 
 **Visual:** Spectator room, named audience chat, trigger Memory Leak or Double Agent. Cut back to the house reaction.
 
-**Narration:** “The audience is not a view counter. Spectators chat and trigger bounded twists—leaking a secret, exposing an alliance, granting immunity, boosting a confessional or forcing a revote.”
+**Narration:** “The audience is not a view counter. Spectators chat and trigger bounded twists. During each ballot, House Pulse lets them predict the outcome, watch live consensus build and earn Oracle points for accurate social reads.”
 
 ## 1:50–2:20 — Vote and consequence
 
@@ -46,9 +46,9 @@
 
 ## 2:20–2:45 — Finale and receipts
 
-**Visual:** Final ballot, winner, score breakdown and season receipts.
+**Visual:** Final ballot, winner, score breakdown, Season Storylines and finale-card download. Click Run It Back and show both producers entering the same fresh lobby.
 
-**Narration:** “The finale combines popularity, survival, secret objectives, strategy and final ballots. Every season ends with a winner and readable receipts of the chaos.”
+**Narration:** “Every season ends with a winner, automatic storylines and a shareable finale card. And when the group wants revenge, Run It Back preserves the party and cast with fresh whisper budgets—no re-inviting, no recasting.”
 
 ## 2:45–3:00 — Why it can grow
 
