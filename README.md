@@ -154,6 +154,8 @@ npx playwright install chromium
 npx playwright install-deps chromium
 npm run test:browser
 node scripts/party-browser-check.mjs
+# With Nexconn credentials configured; otherwise this explicitly reports SKIP:
+npm run test:nexconn
 ```
 
 Scripts use `APP_URL` or `GAME_URL` when testing another address. Screenshots are written to `/home/user/qa-puppet-house` in the build workspace.

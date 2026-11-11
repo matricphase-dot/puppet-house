@@ -29,6 +29,7 @@
 Do not submit until all applicable boxes are checked:
 
 - [ ] `GET /api/health` returns `status: ok`, `storage: postgres` and `nexconnConfigured: true`.
+- [ ] `APP_URL=<public-url> REQUIRE_POSTGRES=1 npm run test:nexconn` passes SDK receive, direct whisper and token authorization checks.
 - [ ] Host creates a room and the header shows **NEXCONN LIVE**.
 - [ ] A second browser joins and receives a new public house message without waiting for fallback polling.
 - [ ] A producer whisper reaches the DirectChannel while rival browsers cannot read it.

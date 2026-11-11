@@ -10,7 +10,8 @@
     "test:game": "node scripts/playthrough.mjs",
     "test:party": "node scripts/party-playthrough.mjs",
     "test:browser": "node scripts/browser-check.mjs",
-    "test:party-browser": "node scripts/party-browser-check.mjs"
+    "test:party-browser": "node scripts/party-browser-check.mjs",
+    "test:nexconn": "node scripts/nexconn-smoke.mjs"
   },
   "dependencies": {
     "@nexconn/chat": "^26.2.1",

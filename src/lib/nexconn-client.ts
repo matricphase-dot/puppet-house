@@ -58,7 +58,10 @@ export async function connectNexconn(gameId: string, producerId: string, isHost:
       sdk.NCEngine.removeMessageHandler("puppet-house-live");
       sdk.NCEngine.addMessageHandler("puppet-house-live", new sdk.MessageHandler({
         onMessageReceived: ({ messages }) => {
-          if (messages.some((message) => message.channelIdentifier.channelId === groupId)) current.onSync();
+          if (messages.some((message) => message.channelIdentifier.channelId === groupId)) {
+            window.dispatchEvent(new CustomEvent("puppet-house:nexconn-received", { detail: { count: messages.length } }));
+            current.onSync();
+          }
         },
       }));
       session = current;
@@ -75,10 +78,12 @@ export async function publishHouseMessage(author: string, text: string) {
   if (!session) return;
   const result = await session.houseSend(`${author}: ${text}`.slice(0, 500));
   if (result && typeof result === "object" && "isOk" in result && !result.isOk) throw new Error("Nexconn house message failed");
+  window.dispatchEvent(new CustomEvent("puppet-house:nexconn-delivery", { detail: { type: "house" } }));
 }
 
 export async function publishWhisper(text: string) {
   if (!session) return;
   const result = await session.directSend(text.slice(0, 180));
   if (result && typeof result === "object" && "isOk" in result && !result.isOk) throw new Error("Nexconn whisper failed");
+  window.dispatchEvent(new CustomEvent("puppet-house:nexconn-delivery", { detail: { type: "whisper" } }));
 }
