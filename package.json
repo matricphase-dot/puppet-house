@@ -1,0 +1,34 @@
+{
+  "name": "puppet-house",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test:game": "node scripts/playthrough.mjs",
+    "test:party": "node scripts/party-playthrough.mjs",
+    "test:browser": "node scripts/browser-check.mjs",
+    "test:party-browser": "node scripts/party-browser-check.mjs"
+  },
+  "dependencies": {
+    "@nexconn/chat": "^26.2.1",
+    "@nexconn/engine": "^26.2.1",
+    "lucide-react": "^1.70.0",
+    "next": "16.4.5",
+    "pg": "^8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "typescript": "^5"
+  }
+}
