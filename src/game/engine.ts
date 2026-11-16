@@ -297,7 +297,16 @@ function fallbackLine(game: Game, speaker: Contestant, target: Contestant) {
   if (speaker.producerId && speaker.lastWhisper) {
     const whisper = speaker.lastWhisper;
     speaker.lastWhisper = undefined;
-    return `I have been thinking about my next move. ${whisper} That is my priority now, ${target.name}.`;
+    const mentioned = game.contestants.find((person) => person.id !== speaker.id
+      && whisper.toLowerCase().includes(person.name.toLowerCase())) || target;
+    // Interpret intent without quoting a producer's private instruction publicly.
+    if (/distrust|suspect|challenge|expose|disagree|vote against/i.test(whisper)) {
+      return `${mentioned.name}, I want to understand your story before I decide where my vote belongs.`;
+    }
+    if (/trust|friend|alliance|protect|support|cooperate/i.test(whisper)) {
+      return `I would rather hear ${mentioned.name} out than rush into a vote. Trust has to start somewhere.`;
+    }
+    return "I am keeping my plans close for now. Let us see who shows their hand first.";
   }
   const lines = DIALOGUE[speaker.archetype];
   const index = Math.floor(seeded(`${game.id}-${game.round}-${game.turn}-${speaker.id}`) * lines.length);

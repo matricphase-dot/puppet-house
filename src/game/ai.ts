@@ -37,7 +37,11 @@ Write ONE natural chat message, 8–35 words. Be specific to the conversation. C
       body: JSON.stringify({
         model: process.env.AI_MODEL || "gpt-4.1-mini",
         temperature: 0.9,
-        max_tokens: 90,
+        // Groq GPT-OSS uses a reasoning budget as well as visible output tokens.
+        // A 90-token cap can exhaust the budget before any dialogue is returned.
+        max_tokens: /gpt-oss/.test(process.env.AI_MODEL || "") ? 1024 : 90,
+        ...(/gpt-oss/.test(process.env.AI_MODEL || "") && baseUrl.includes("api.groq.com")
+          ? { reasoning_effort: "low", include_reasoning: false } : {}),
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
@@ -46,10 +50,16 @@ Write ONE natural chat message, 8–35 words. Be specific to the conversation. C
       signal: AbortSignal.timeout(12000),
       cache: "no-store",
     });
-    if (!response.ok) return undefined;
+    if (!response.ok) {
+      console.warn("AI dialogue fallback", { status: response.status });
+      return undefined;
+    }
     const data = await response.json();
-    return data.choices?.[0]?.message?.content?.replace(/^['"]|['"]$/g, "").trim() || undefined;
+    const line = data.choices?.[0]?.message?.content?.replace(/^['"]|['"]$/g, "").trim();
+    if (!line) console.warn("AI dialogue fallback", { reason: "empty_content", finishReason: data.choices?.[0]?.finish_reason });
+    return line || undefined;
   } catch {
+    console.warn("AI dialogue fallback", { reason: "request_failed_or_timed_out" });
     return undefined;
   }
 }

@@ -40,14 +40,24 @@ export async function connectNexconn(gameId: string, producerId: string, isHost:
       const groupId = `house-${gameId}`.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
       const house = new sdk.GroupChannel(groupId);
       if (isHost) {
-        const created = await sdk.GroupChannel.createGroup({ groupId, groupName: `Puppet House ${gameId}` });
+        // This channel carries public house dialogue only. Nexconn otherwise defaults
+        // to owner-approved joins: a successful request is not completed membership.
+        const created = await sdk.GroupChannel.createGroup({
+          groupId, groupName: `Puppet House ${gameId}`, joinPermission: sdk.GroupJoinPermission.FREE,
+        });
         if (!created.isOk) {
+          const updated = await house.updateInfo({ joinPermission: sdk.GroupJoinPermission.FREE });
+          if (!updated.isOk) throw new Error(updated.msg || "Could not configure house channel");
           const joined = await house.join();
           if (!joined.isOk) throw new Error(joined.msg || "Could not join house channel");
         }
       } else {
         const joined = await house.join();
         if (!joined.isOk) throw new Error(joined.msg || "Could not join house channel");
+      }
+      const membership = await house.getMembers([auth.userId]);
+      if (!membership.isOk || !membership.data?.some((member) => member.userId === auth.userId)) {
+        throw new Error("Nexconn group membership is not active; using authoritative polling");
       }
       const direct = new sdk.DirectChannel(auth.agentId);
       const current: NexconnSession = {

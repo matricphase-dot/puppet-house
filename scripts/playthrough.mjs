@@ -45,7 +45,13 @@ assert(spectatorResponse.ok, "spectator joins by room code");
 spectator = spectatorData.spectator;
 assert(spectatorData.game.contestants.every((person) => person.objectiveId === "hidden"), "all objectives are hidden from spectators");
 assert(spectatorData.game.messages.every((message) => message.channel !== "confessional"), "producer cam is hidden from spectators");
-assert(fs.existsSync(`.data/games/${game.id}.json`), "game is persisted to disk");
+const health = await (await fetch(`${base}/api/health`)).json();
+if (health.storage === "local" && new URL(base).hostname.match(/^(localhost|127\.0\.0\.1)$/)) {
+  assert(fs.existsSync(`.data/games/${game.id}.json`), "game is persisted to disk");
+} else {
+  const stored = await fetch(`${base}/api/game?id=${game.id}&producerId=${producerId}`);
+  assert(stored.ok && (await stored.json()).game.id === game.id, "saved game can be read from deployed storage");
+}
 
 await call("tick");
 await call("tick");
@@ -112,6 +118,7 @@ while (game.phase !== "results" && safety < 100) {
   await call("reveal");
 }
 
+assert(!game.messages.some((message) => message.channel === "house" && message.text.includes("Build trust with Riya.")), "private coaching is never quoted into public dialogue");
 assert(game.phase === "results", `season reaches results in ${safety} actions`);
 assert(game.winnerId, "a winner is selected");
 assert(game.scores.length === 4, "all contestants receive scores");

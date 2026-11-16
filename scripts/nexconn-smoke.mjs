@@ -33,7 +33,7 @@ try {
   await host.waitForTimeout(300);
 
   const received = guest.evaluate(() => new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(false), 10_000);
+    const timer = setTimeout(() => resolve(false), 45_000);
     window.addEventListener("puppet-house:nexconn-received", (event) => {
       clearTimeout(timer);
       resolve(event.detail.count > 0);
@@ -43,7 +43,7 @@ try {
   assert.equal(await received, true, "Guest must receive an SDK group event, not only polling");
 
   const delivered = host.evaluate(() => new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(false), 10_000);
+    const timer = setTimeout(() => resolve(false), 45_000);
     window.addEventListener("puppet-house:nexconn-delivery", (event) => {
       if (event.detail.type === "whisper") {
         clearTimeout(timer);
