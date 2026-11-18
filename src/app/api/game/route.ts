@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
     if (limited) return limited;
     const body = await request.json();
     const input = body.input as CastingInput | undefined;
+    // Check shared counters before taking a room row lock / transaction connection.
+    if (body.action === "whisper") {
+      const whisperLimit = await rateLimit(request, "producer-whisper", 20);
+      if (whisperLimit) return whisperLimit;
+    }
 
     if (["create", "createParty"].includes(body.action)) {
       const creationLimit = await rateLimit(request, "season-create", 12, 60 * 60 * 1000);
@@ -147,8 +152,6 @@ export async function POST(request: NextRequest) {
           if (speaker.lastWhisper && line) speaker.lastWhisper = undefined;
         }
       } else if (body.action === "whisper") {
-        const whisperLimit = await rateLimit(request, "producer-whisper", 20);
-        if (whisperLimit) throw new ActionError("Too many whispers. Try again shortly.", 429);
         const text = cleanText(body.text, 180);
         const moderated = moderationError(text);
         if (moderated) throw new ActionError(moderated);

@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { PoolClient } from "pg";
 import { Game } from "./types";
 
 const globalStore = globalThis as unknown as {
@@ -8,6 +10,7 @@ const globalStore = globalThis as unknown as {
   puppetHousePool?: import("pg").Pool;
   puppetHouseSchema?: Promise<void>;
 };
+const transactions = new AsyncLocalStorage<PoolClient>();
 const games = globalStore.puppetHouseGames || new Map<string, Game>();
 const locks = globalStore.puppetHouseLocks || new Map<string, Promise<unknown>>();
 globalStore.puppetHouseGames = games;
@@ -56,10 +59,20 @@ async function pool() {
     globalStore.puppetHousePool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 4,
+      connectionTimeoutMillis: 8_000,
+      query_timeout: 20_000,
+      statement_timeout: 20_000,
+      idle_in_transaction_session_timeout: 20_000,
       ssl: process.env.DATABASE_SSL === "disable" ? undefined : { rejectUnauthorized: false },
     });
   }
   return globalStore.puppetHousePool;
+}
+
+// Nested storage calls inside a room mutation must reuse its connection. Otherwise
+// four concurrent callers can fill the pool while the lock owner waits for a fifth.
+async function databaseClient() {
+  return transactions.getStore() || await pool();
 }
 
 async function ensureSchema() {
@@ -73,7 +86,10 @@ async function ensureSchema() {
         created_at BIGINT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS puppet_house_updated_idx ON puppet_house_games(updated_at);
-    `).then(() => undefined));
+    `).then(() => undefined)).catch((error) => {
+      globalStore.puppetHouseSchema = undefined;
+      throw error;
+    });
   }
   return globalStore.puppetHouseSchema;
 }
@@ -90,7 +106,7 @@ export async function saveGame(game: Game) {
   game.updatedAt = Date.now();
   if (databaseEnabled) {
     await ensureSchema();
-    const client = await pool();
+    const client = await databaseClient();
     await client.query(`INSERT INTO puppet_house_games(id, room_code, data, updated_at, created_at)
       VALUES ($1,$2,$3,$4,$5)
       ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at`,
@@ -113,7 +129,7 @@ export async function getGame(id: string): Promise<Game | undefined> {
   if (!id) return undefined;
   if (databaseEnabled) {
     await ensureSchema();
-    const result = await (await pool()).query("SELECT data FROM puppet_house_games WHERE id=$1", [id]);
+    const result = await (await databaseClient()).query("SELECT data FROM puppet_house_games WHERE id=$1", [id]);
     return result.rows[0] ? normalize(result.rows[0].data as Game) : undefined;
   }
   return games.get(id) || readLocal(id);
@@ -124,7 +140,7 @@ export async function getGameByCode(code: string): Promise<Game | undefined> {
   if (!clean) return undefined;
   if (databaseEnabled) {
     await ensureSchema();
-    const result = await (await pool()).query("SELECT data FROM puppet_house_games WHERE room_code=$1", [clean]);
+    const result = await (await databaseClient()).query("SELECT data FROM puppet_house_games WHERE room_code=$1", [clean]);
     return result.rows[0] ? normalize(result.rows[0].data as Game) : undefined;
   }
   const cached = [...games.values()].find((game) => game.roomCode === clean);
@@ -152,7 +168,7 @@ export async function updateGame<T>(selector: { id?: string; code?: string }, mu
       );
       if (!result.rows[0]) { await client.query("ROLLBACK"); return undefined; }
       const game = normalize(result.rows[0].data as Game);
-      const value = await mutation(game);
+      const value = await transactions.run(client, () => mutation(game));
       game.updatedAt = Date.now();
       await client.query("UPDATE puppet_house_games SET data=$2, updated_at=$3 WHERE id=$1", [game.id, JSON.stringify(game), game.updatedAt]);
       await client.query("COMMIT");
@@ -198,7 +214,7 @@ export async function checkRateLimit(key: string, limit: number, windowMs = 60_0
     return current.count <= limit;
   }
   await ensureSchema();
-  const client = await pool();
+  const client = await databaseClient();
   await client.query(`CREATE TABLE IF NOT EXISTS puppet_house_rate_limits (
     key TEXT PRIMARY KEY, count INTEGER NOT NULL, reset_at BIGINT NOT NULL
   )`);
@@ -214,7 +230,7 @@ export async function checkRateLimit(key: string, limit: number, windowMs = 60_0
 export async function storageHealth() {
   if (!databaseEnabled) return { mode: "local" as const, ok: true };
   await ensureSchema();
-  await (await pool()).query("SELECT 1");
+  await (await databaseClient()).query("SELECT 1");
   return { mode: "postgres" as const, ok: true };
 }
 
@@ -224,7 +240,7 @@ export async function cleanupGames() {
   const abandonedCutoff = now - 30 * 24 * 60 * 60 * 1000;
   if (databaseEnabled) {
     await ensureSchema();
-    await (await pool()).query(`DELETE FROM puppet_house_games WHERE updated_at < $1
+    await (await databaseClient()).query(`DELETE FROM puppet_house_games WHERE updated_at < $1
       OR ((data->>'phase' = 'results' OR data->>'phase' = 'lobby') AND updated_at < $2)`,
     [abandonedCutoff, finishedCutoff]);
     return;
