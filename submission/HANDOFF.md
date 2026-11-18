@@ -2,51 +2,26 @@
 
 **Deadline:** 22 Nov 2026, 23:59 AoE / 23 Nov 2026, 5:29 PM IST.
 
-## Already implemented and locally verified
+## Verified and published
 
-- Solo Director Mode and two-to-four-producer party rooms with AI-filled seats.
-- Server-authoritative private knowledge, three-whisper budgets, pacing, twists, ballots, elimination and scoring.
-- Privacy-safe spectators, audience chat, bounded audience powers, House Pulse predictions and Oracle points.
-- Automatic Season Storylines, downloadable finale PNG cards and identity-preserving party rematches.
-- Private contestant DMs with deliberate Double Agent exposure.
-- Local atomic persistence, optional PostgreSQL transactions, shared rate limits and cleanup.
-- Nexconn token issuance, group/direct transport, receive handlers and polling fallback.
-- Optional knowledge-bounded AI dialogue with deterministic fallback.
-- Production build, lint, solo/spectator API and browser tests, four-producer API test and two-browser party test.
+- Public app: https://puppet-house-oregon.onrender.com
+- Public repository: https://github.com/matricphase-dot/puppet-house
+- Nexconn group reception, direct whisper send and unauthorized token rejection: PASS on the deployed app.
+- Groq: real provider success and non-template dialogue observed.
+- PostgreSQL: healthy; transaction-connection reuse and bounded timeouts fix concurrent-action starvation.
+- Solo, 58-action/four-producer party, desktop/mobile browser and enhancement regressions: PASS.
+- Real public-browser demo recorded with narrator, captions, actual results and rematch.
+- Final five-page write-up: `Puppet_House_Writeup.pdf`; includes the deployed client's public App Key.
+- See `RELEASE_QA_REPORT.md` for evidence and limitations.
 
-## Required from the owner
+## Owner actions still required
 
-- [ ] Nexconn App Key for the write-up and public client configuration.
-- [ ] Nexconn App Secret configured only in deployment/server environment variables.
-- [ ] Managed PostgreSQL connection string for the public deployment.
-- [ ] Public hosting account and final app URL.
-- [ ] GitHub account/repository destination and public repository URL.
-- [ ] Optional AI API key if unscripted dialogue will be shown in the demo.
-- [ ] Final recorded demo video and its public URL.
-- [ ] Challenge submission account and final form submission.
+- Upload the **live-app** demo MP4 to an accepted video host; verify link viewing while signed out.
+- Paste the hosted demo URL, public app/repository links, and the same App Key into the challenge form.
+- Upload the final PDF (not the old draft), review terms/ownership and submit.
+- Consider always-on Render compute during judging; free instances may cold-start slowly.
+- Confirm Render database expiry and provider credit/quota cover the judging period.
+- Revoke the GitHub PAT after final pushes. Its temporary workspace file is removed after use.
+- Add only genuine traction evidence; automated tests are not active users.
 
-## Credential-based release gate
-
-Do not submit until all applicable boxes are checked:
-
-- [ ] `GET /api/health` returns `status: ok`, `storage: postgres` and `nexconnConfigured: true`.
-- [ ] `APP_URL=<public-url> REQUIRE_POSTGRES=1 npm run test:nexconn` passes SDK receive, direct whisper and token authorization checks.
-- [ ] Host creates a room and the header shows **NEXCONN LIVE**.
-- [ ] A second browser joins and receives a new public house message without waiting for fallback polling.
-- [ ] A producer whisper reaches the DirectChannel while rival browsers cannot read it.
-- [ ] Two producers act simultaneously; both private actions persist with no lost update.
-- [ ] Server restart/redeploy preserves an active room.
-- [ ] Spectator responses contain no producer-only state outside intended public twists.
-- [ ] Rate-limit and moderation responses are verified on the public deployment.
-- [ ] Full solo, party and spectator tests run against the public URL.
-- [ ] The recorded demo shows real gameplay rather than a static mock-up.
-- [ ] Write-up placeholders are replaced and the final PDF is reviewed.
-- [ ] Repository contains no `.env`, App Secret, AI key, database credential or local game data.
-
-## Final links
-
-- Public app: **PENDING**
-- Public GitHub repository: **PENDING**
-- Demo video: **PENDING**
-- Final write-up PDF: **PENDING — draft generated**
-- Nexconn App Key: **PENDING — required in write-up**
+The App Secret and provider/database credentials must remain in server environment settings. No prize outcome or uninterrupted hosting is guaranteed.

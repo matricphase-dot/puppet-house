@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const base=process.env.APP_URL||'https://puppet-house-oregon.onrender.com';
-const out='/home/user/puppet-house-demo';
+const out=process.env.DEMO_OUTPUT_DIR || '/home/user/puppet-house-demo';
 await mkdir(out+'/raw',{recursive:true}); await mkdir(out+'/screens',{recursive:true});
 const browser=await chromium.launch({headless:true});
 const contexts=[]; const tracks=new Map(); const scenes=[]; const errors=[]; const sampleLines=[];
@@ -22,6 +22,7 @@ try{
  await shot('03-party',host,async()=>{await host.waitForTimeout(1500);await guest.getByRole('button',{name:'Join the party',exact:true}).click();await guest.waitForSelector('.waiting-host');await host.waitForFunction(()=>document.querySelectorAll('.party-slot.filled').length===2);await host.waitForTimeout(2500);});
  guestId=await guest.evaluate(()=>localStorage.getItem('puppet-house-producer'));
  await host.getByRole('button',{name:'Start the party season'}).click();await host.waitForSelector('.game-page');await host.getByTitle('Pause season').click();
+ if(process.env.REQUIRE_LIVE_INTEGRATIONS==='1'){await host.getByText('NEXCONN LIVE',{exact:true}).waitFor();await guest.getByText('NEXCONN LIVE',{exact:true}).waitFor();}
  await shot('04-whispers',host,async()=>{await host.locator('.whisper-section textarea').fill('Build trust with Riya. Keep our alliance quiet until the vote.');await host.waitForTimeout(1200);await host.getByRole('button',{name:'Send whisper'}).click();await host.waitForTimeout(1000);for(let i=0;i<2;i++){await host.getByRole('button',{name:'Next moment'}).click();await host.waitForFunction(()=>!document.querySelector('button[title="How to play"]')?.disabled);await host.waitForTimeout(2000);} });
  spectator=await page();await spectator.goto(base+'/spectate/'+roomCode);await spectator.getByPlaceholder('e.g. DramaWatcher').fill('DramaClub');await spectator.getByRole('button',{name:'Enter the audience'}).click();await spectator.getByText('AUDIENCE CONTROL',{exact:true}).waitFor();
  await shot('05-audience',spectator,async()=>{await spectator.getByPlaceholder('React to the chaos…').fill('Maya is making moves. Who do we trust?');await spectator.locator('.spectator-chat-input button').click();await spectator.getByRole('button',{name:/Memory leak/i}).click();await spectator.waitForTimeout(2200);});
@@ -39,8 +40,10 @@ try{
  await shot('07-finale',host,async()=>{await host.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await host.waitForTimeout(2200);await host.locator('.storyline-section').scrollIntoViewIfNeeded();await host.waitForTimeout(2500);await host.getByRole('button',{name:'Download finale card'}).scrollIntoViewIfNeeded();const d=host.waitForEvent('download');await host.getByRole('button',{name:'Download finale card'}).click();await(await d).saveAs(out+'/Puppet_House_Finale_Card.png');await host.waitForTimeout(1500);});
  await shot('08-rematch',host,async()=>{await host.getByRole('button',{name:'Run it back — same party'}).click();await host.waitForSelector('.party-lobby');await guest.waitForSelector('.party-lobby');assert.equal(await host.evaluate(()=>localStorage.getItem('puppet-house-game')),await guest.evaluate(()=>localStorage.getItem('puppet-house-game')));await host.waitForTimeout(2500);});
  const data=await readFile('src/game/data.ts','utf8');const chunk=data.split('export const DIALOGUE')[1].split('export const AUDIENCE_LINES')[0];const patterns=[...chunk.matchAll(/^\s*"(.*)",?$/gm)].map(m=>new RegExp('^'+m[1].replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace('\\{target\\}','.+')+'$'));
+ const providerHealth=await(await fetch(base+'/api/health')).json();
+ if(process.env.REQUIRE_LIVE_INTEGRATIONS==='1')assert(providerHealth.aiDialogue?.lastSuccessAt,'real AI provider success required');
  const novel=sampleLines.filter(l=>!patterns.some(p=>p.test(l))&&!l.startsWith('I have been thinking about my next move.'));
- await writeFile(out+'/session-evidence.json',JSON.stringify({url:base,roomCode,consoleErrors:errors,publicDialogueSamples:sampleLines,nonDirectorDialogueSamples:novel,rematchMigration:true},null,2));
+ await writeFile(out+'/session-evidence.json',JSON.stringify({url:base,roomCode,consoleErrors:errors,providerHealth,publicDialogueSamples:sampleLines,nonDirectorDialogueSamples:novel,rematchMigration:true},null,2));
 }finally{
  for(const c of contexts)await c.close();
  for(const s of scenes){s.file=await tracks.get(s.source).video.path();delete s.source;}

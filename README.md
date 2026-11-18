@@ -4,6 +4,10 @@
 
 A real-time, chat-driven reality-show strategy game for the **Nexconn Build Challenge 2026**. Create an autonomous contestant, give it a secret and mission, then try to steer the social chaos with only three private whispers while other producers and the audience interfere.
 
+**Play the deployed app:** https://puppet-house-oregon.onrender.com
+
+Live verification passed for Nexconn group reception/direct send/authorization, Groq dialogue, PostgreSQL, and core gameplay. See `submission/RELEASE_QA_REPORT.md` for scope and remaining hosting risks.
+
 ## What is playable
 
 - **Solo seasons:** one producer and three autonomous contestants.
@@ -90,7 +94,7 @@ The header shows **NEXCONN LIVE** only after a successful connection. Otherwise 
 
 Docs: https://docs.nexconn.ai/chatsdk-web
 
-> Live Nexconn delivery requires credential-based end-to-end verification. Do not describe it as verified merely because the SDK integration compiles.
+> Live Nexconn group reception, direct whisper send and token authorization have passed credential-based tests on the public app. Rerun the smoke test after integration/configuration changes; a connected badge alone is not proof of delivery.
 
 ### Optional unscripted AI dialogue
 
@@ -169,4 +173,4 @@ The automated party test covers 58 actions, four independent producers, unauthor
 
 ## Deployment and submission boundary
 
-The code supports a public Next.js deployment with managed PostgreSQL. Public hosting, a GitHub account, Nexconn credentials, optional AI credentials, and final submission accounts belong to the user. The submission write-up remains a **draft** until its App Key, public app URL, repository URL and video URL are filled in and live integrations are tested. See `submission/HANDOFF.md`.
+The public app runs on Render with PostgreSQL, Nexconn and Groq verified by scoped live tests. `submission/Puppet_House_Writeup.pdf` is the final write-up with its public App Key. The owner must upload the live-demo video, review the final form and maintain hosting/provider availability. See `submission/HANDOFF.md` and `submission/RELEASE_QA_REPORT.md`.
