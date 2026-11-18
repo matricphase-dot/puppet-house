@@ -44,16 +44,22 @@ try {
   const ai = await load('src/game/ai.ts', s => s.replace('import { OBJECTIVES } from "./data";', 'const OBJECTIVES = [];'));
   const fixture = { round: 1, messages: [], contestants: [] };
   const speaker = { id: 'one', name: 'Maya', archetype: 'strategist', tagline: 'Here to play', secret: 'Private', objectiveId: 'secret-keeper' };
+  assert.equal(ai.dialogueHealth().state, 'unverified');
   assert(await ai.generateLine(fixture, speaker));
+  assert.equal(ai.dialogueHealth().state, 'active');
+  assert(ai.dialogueHealth().lastSuccessAt);
+  assert(!JSON.stringify(ai.dialogueHealth()).includes('contract-only'));
   assert.equal(sent.url, 'https://api.groq.com/openai/v1/chat/completions');
   assert.equal(sent.body.max_tokens, 1024); assert.equal(sent.body.reasoning_effort, 'low'); assert.equal(sent.body.include_reasoning, false);
   globalThis.fetch = async () => ({ ok: false, status: 401 });
   assert.equal(await ai.generateLine(fixture, speaker), undefined);
+  assert.equal(ai.dialogueHealth().failure, 'provider_http_401');
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ choices: [{ finish_reason: 'length', message: { content: '' } }] }) });
   assert.equal(await ai.generateLine(fixture, speaker), undefined);
+  assert.equal(ai.dialogueHealth().failure, 'empty_content');
   console.log(JSON.stringify({ result: 'PASS', nexconnMembershipScenarios: 4, groqRequestShape: true, safeFallbacks: true, liveCredentialsTested: false }, null, 2));
 } finally {
   globalThis.fetch = savedFetch; globalThis.window = savedWindow; console.warn = savedWarn;
   for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key];
-  Object.assign(process.env, env); delete globalThis.__sdkFactory;
+  Object.assign(process.env, env); delete globalThis.__sdkFactory; delete globalThis.puppetHouseDialogueTelemetry;
 }

@@ -1,6 +1,24 @@
 import { OBJECTIVES } from "./data";
 import { Contestant, Game } from "./types";
 
+type DialogueTelemetry = {
+  state: "unverified" | "active" | "fallback";
+  lastAttemptAt?: number;
+  lastSuccessAt?: number;
+  failure?: string;
+};
+
+const telemetry = globalThis as typeof globalThis & { puppetHouseDialogueTelemetry?: DialogueTelemetry };
+function recordDialogue(update: Partial<DialogueTelemetry>) {
+  telemetry.puppetHouseDialogueTelemetry = { state: "unverified", ...telemetry.puppetHouseDialogueTelemetry, ...update };
+}
+
+/** Process-local operational metadata only: never prompts, keys or contestant content. */
+export function dialogueHealth() {
+  if (!process.env.AI_API_KEY) return { state: "disabled" as const, scope: "process" as const };
+  return { ...(telemetry.puppetHouseDialogueTelemetry || { state: "unverified" as const }), scope: "process" as const };
+}
+
 /**
  * Generates dialogue from only what this contestant is allowed to know.
  * Other contestants' secrets, objectives and producer whispers never enter the prompt.
@@ -30,6 +48,7 @@ Write ONE natural chat message, 8–35 words. Be specific to the conversation. C
     speaker.lastWhisper ? `Your producer privately advised: "${speaker.lastWhisper}". Incorporate this naturally without quoting or mentioning the producer.` : ""
   }\nWrite your next public message.`;
 
+  recordDialogue({ lastAttemptAt: Date.now() });
   try {
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
@@ -51,14 +70,21 @@ Write ONE natural chat message, 8–35 words. Be specific to the conversation. C
       cache: "no-store",
     });
     if (!response.ok) {
+      recordDialogue({ state: "fallback", failure: `provider_http_${response.status}` });
       console.warn("AI dialogue fallback", { status: response.status });
       return undefined;
     }
     const data = await response.json();
     const line = data.choices?.[0]?.message?.content?.replace(/^['"]|['"]$/g, "").trim();
-    if (!line) console.warn("AI dialogue fallback", { reason: "empty_content", finishReason: data.choices?.[0]?.finish_reason });
+    if (!line) {
+      recordDialogue({ state: "fallback", failure: "empty_content" });
+      console.warn("AI dialogue fallback", { reason: "empty_content", finishReason: data.choices?.[0]?.finish_reason });
+    } else {
+      recordDialogue({ state: "active", lastSuccessAt: Date.now(), failure: undefined });
+    }
     return line || undefined;
   } catch {
+    recordDialogue({ state: "fallback", failure: "request_failed_or_timed_out" });
     console.warn("AI dialogue fallback", { reason: "request_failed_or_timed_out" });
     return undefined;
   }

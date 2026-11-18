@@ -52,6 +52,7 @@ Prepared mitigation in `src/game/ai.ts`:
 - Increase GPT-OSS token budget from 90 to 1024, allowing room for reasoning as well as visible output.
 - For Groq GPT-OSS only, request low reasoning effort and hide reasoning from dialogue output.
 - Add safe status / timeout / empty-content logging, without printing API keys, prompts or secrets.
+- Expose process-local `aiDialogue` health metadata (`unverified`, `active`, or `fallback` with a sanitized reason), and make health responses request-time and non-cacheable. This distinguishes provider success from merely configured keys.
 - Preserve deterministic fallback if the provider is unavailable.
 
 Acceptance after deploy: run a new season, inspect Render logs for `AI dialogue fallback`, and confirm actual provider output. If the status is 401/403, correct the key or model permissions; if 429, resolve quota. No live Groq success is claimed for the prepared mitigation.
